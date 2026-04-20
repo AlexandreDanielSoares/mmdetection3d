@@ -28,7 +28,8 @@ def get_thresholds(scores: np.ndarray, num_gt, num_sample_pts=41):
 
 
 def clean_data(gt_anno, dt_anno, current_class, difficulty):
-    CLASS_NAMES = ['car', 'pedestrian', 'cyclist']
+    # Added new classes that I'm evaluating
+    CLASS_NAMES = ['car', 'pedestrian', 'cyclist', 'van', 'person_sitting', 'truck']
     MIN_HEIGHT = [40, 25, 25]
     MAX_OCCLUSION = [0, 1, 2]
     MAX_TRUNCATION = [0.15, 0.3, 0.5]
@@ -675,15 +676,19 @@ def kitti_eval(gt_annos,
     Returns:
         tuple: String and dict of evaluation results.
     """
+    #print(f"Ground Truth Annotations:\n{gt_annos}")
+    #print(f"Detection Annotations:\n{dt_annos}")
+    #print(f"Current Classes:{current_classes}")
     assert len(eval_types) > 0, 'must contain at least one evaluation type'
     if 'aos' in eval_types:
         assert 'bbox' in eval_types, 'must evaluate bbox when evaluating aos'
-    overlap_0_7 = np.array([[0.7, 0.5, 0.5, 0.7,
-                             0.5], [0.7, 0.5, 0.5, 0.7, 0.5],
-                            [0.7, 0.5, 0.5, 0.7, 0.5]])
-    overlap_0_5 = np.array([[0.7, 0.5, 0.5, 0.7, 0.5],
-                            [0.5, 0.25, 0.25, 0.5, 0.25],
-                            [0.5, 0.25, 0.25, 0.5, 0.25]])
+    # Needed to add a last value in all the lists for the Truck class
+    overlap_0_7 = np.array([[0.7, 0.5, 0.5, 0.7, 0.5, 0.7], 
+                            [0.7, 0.5, 0.5, 0.7, 0.5, 0.7],
+                            [0.7, 0.5, 0.5, 0.7, 0.5, 0.7]])
+    overlap_0_5 = np.array([[0.7, 0.5, 0.5, 0.7, 0.5, 0.7],
+                            [0.5, 0.25, 0.25, 0.5, 0.25, 0.5],
+                            [0.5, 0.25, 0.25, 0.5, 0.25, 0.5]])
     min_overlaps = np.stack([overlap_0_7, overlap_0_5], axis=0)  # [2, 3, 5]
     class_to_name = {
         0: 'Car',
@@ -691,6 +696,7 @@ def kitti_eval(gt_annos,
         2: 'Cyclist',
         3: 'Van',
         4: 'Person_sitting',
+        5: 'Truck',  # Need to add this line because I want to evaluate the detection on the Truck class
     }
     name_to_class = {v: n for n, v in class_to_name.items()}
     if not isinstance(current_classes, (list, tuple)):
@@ -895,6 +901,7 @@ def kitti_eval_coco_style(gt_annos, dt_annos, current_classes):
         2: 'Cyclist',
         3: 'Van',
         4: 'Person_sitting',
+        5: 'Truck',  # Need to add this line because I want to evaluate the detection on the Truck class
     }
     class_to_range = {
         0: [0.5, 0.95, 10],
@@ -902,6 +909,7 @@ def kitti_eval_coco_style(gt_annos, dt_annos, current_classes):
         2: [0.25, 0.7, 10],
         3: [0.5, 0.95, 10],
         4: [0.25, 0.7, 10],
+        5: [0.5, 0.95, 10], # Need to add this line because I want to evaluate the detection on the Truck class
     }
     name_to_class = {v: n for n, v in class_to_name.items()}
     if not isinstance(current_classes, (list, tuple)):
