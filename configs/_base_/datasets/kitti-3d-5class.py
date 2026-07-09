@@ -102,7 +102,7 @@ eval_pipeline = [
 ]
 train_dataloader = dict(
     #batch_size=6, # original batch size is 6, but it is changed to 4 for GPU memory contraints
-    batch_size=2,
+    batch_size=4,
     num_workers=4,
     persistent_workers=True,
     sampler=dict(type='DefaultSampler', shuffle=True),

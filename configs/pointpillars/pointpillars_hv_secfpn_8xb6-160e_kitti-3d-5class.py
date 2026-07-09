@@ -39,69 +39,6 @@ db_sampler = dict(
         backend_args=backend_args),
     backend_args=backend_args)
 
-model = dict(
-    bbox_head=dict(
-        num_classes=5,
-        assign_per_class=True,
-        anchor_generator=dict(
-            _delete_=True,
-            type='AlignedAnchor3DRangeGenerator',
-            ranges=[
-                [0, -39.68, -0.6, 69.12, 39.68, -0.6],
-                [0, -39.68, -0.6, 69.12, 39.68, -0.6],
-                [0, -39.68, -1.78, 69.12, 39.68, -1.78],
-                [0, -39.68, -1.78, 69.12, 39.68, -1.78],
-                [0, -39.68, -1.78, 69.12, 39.68, -1.78]],
-            sizes=[
-                [0.8, 0.6, 1.73],
-                [1.76, 0.6, 1.73],
-                [3.9, 1.6, 1.56],
-                [5.1, 1.9, 2.2],
-                [9.2, 2.6, 3.4]],
-            rotations=[0, 1.57],
-            reshape_out=False)),
-    train_cfg=dict(
-        _delete_=True,
-        assigner=[
-            dict(
-                type='Max3DIoUAssigner',
-                iou_calculator=dict(type='mmdet3d.BboxOverlapsNearest3D'),
-                pos_iou_thr=0.5,
-                neg_iou_thr=0.35,
-                min_pos_iou=0.35,
-                ignore_iof_thr=-1),
-            dict(
-                type='Max3DIoUAssigner',
-                iou_calculator=dict(type='mmdet3d.BboxOverlapsNearest3D'),
-                pos_iou_thr=0.5,
-                neg_iou_thr=0.35,
-                min_pos_iou=0.35,
-                ignore_iof_thr=-1),
-            dict(
-                type='Max3DIoUAssigner',
-                iou_calculator=dict(type='mmdet3d.BboxOverlapsNearest3D'),
-                pos_iou_thr=0.6,
-                neg_iou_thr=0.45,
-                min_pos_iou=0.45,
-                ignore_iof_thr=-1),
-            dict(
-                type='Max3DIoUAssigner',
-                iou_calculator=dict(type='mmdet3d.BboxOverlapsNearest3D'),
-                pos_iou_thr=0.6,
-                neg_iou_thr=0.45,
-                min_pos_iou=0.45,
-                ignore_iof_thr=-1),
-            dict(
-                type='Max3DIoUAssigner',
-                iou_calculator=dict(type='mmdet3d.BboxOverlapsNearest3D'),
-                pos_iou_thr=0.6,
-                neg_iou_thr=0.45,
-                min_pos_iou=0.45,
-                ignore_iof_thr=-1)],
-        allowed_border=0,
-        pos_weight=-1,
-        debug=False))
-
 train_pipeline = [
     dict(
         type='LoadPointsFromFile',
@@ -149,59 +86,9 @@ test_pipeline = [
 ]
 
 train_dataloader = dict(
-    # batch_size=6, # original batch size is 6, but it is changed to 4 for GPU memory contraints
-    batch_size=4,
-    num_workers=4,
-    persistent_workers=True,
-    sampler=dict(type='DefaultSampler', shuffle=True),
-    dataset=dict(
-        type='RepeatDataset',
-        times=2,
-        dataset=dict(
-            type='KittiDataset',
-            data_root=data_root,
-            ann_file='kitti_infos_train.pkl',
-            data_prefix=dict(pts='training/velodyne_reduced'),
-            pipeline=train_pipeline,
-            modality=dict(use_lidar=True, use_camera=False),
-            test_mode=False,
-            metainfo=metainfo,
-            box_type_3d='LiDAR',
-            backend_args=backend_args)))
-val_dataloader = dict(
-    batch_size=1,
-    num_workers=1,
-    persistent_workers=True,
-    drop_last=False,
-    sampler=dict(type='DefaultSampler', shuffle=False),
-    dataset=dict(
-        type='KittiDataset',
-        data_root=data_root,
-        data_prefix=dict(pts='training/velodyne_reduced'),
-        ann_file='kitti_infos_val.pkl',
-        pipeline=test_pipeline,
-        modality=dict(use_lidar=True, use_camera=False),
-        test_mode=True,
-        metainfo=metainfo,
-        box_type_3d='LiDAR',
-        backend_args=backend_args))
-test_dataloader = dict(
-    batch_size=1,
-    num_workers=1,
-    persistent_workers=True,
-    drop_last=False,
-    sampler=dict(type='DefaultSampler', shuffle=False),
-    dataset=dict(
-        type='KittiDataset',
-        data_root=data_root,
-        data_prefix=dict(pts='training/velodyne_reduced'),
-        ann_file='kitti_infos_val.pkl',
-        pipeline=test_pipeline,
-        modality=dict(use_lidar=True, use_camera=False),
-        test_mode=True,
-        metainfo=metainfo,
-        box_type_3d='LiDAR',
-        backend_args=backend_args))
+    dataset=dict(dataset=dict(pipeline=train_pipeline, metainfo=metainfo)))
+test_dataloader = dict(dataset=dict(pipeline=test_pipeline, metainfo=metainfo))
+val_dataloader = dict(dataset=dict(pipeline=test_pipeline, metainfo=metainfo))
 
 val_evaluator = dict(
     type='KittiMetric',
@@ -210,6 +97,28 @@ val_evaluator = dict(
     backend_args=backend_args)
 test_evaluator = val_evaluator
 
-vis_backends = [dict(type='LocalVisBackend')]
+vis_backends = [
+    dict(type='LocalVisBackend'),
+    dict(
+        type='WandbVisBackend',
+        init_kwargs=dict(
+            project='Dissertação Mestrado',                  # Change to your W&B project
+            name='PointPillars_Training_Kitti_40epochs',     # Optional: experiment name
+            id='PointPillars_KITTI_5class_second_training',  # set to previous run's id to resume the same run
+            resume='allow',                                  # 'allow'|'must'|'never' (use 'allow' to resume if exists)
+            save_code=True                                   # Optional: save code to W&B                             
+            ))
+]
+
 visualizer = dict(
-    type='Det3DLocalVisualizer', vis_backends=vis_backends, name='visualizer')
+    type='Det3DLocalVisualizer', 
+    vis_backends=vis_backends, 
+    name='visualizer')
+
+default_hooks = dict(
+    timer=dict(type='IterTimerHook'),
+    logger=dict(type='LoggerHook', interval=50),
+    param_scheduler=dict(type='ParamSchedulerHook'),
+    checkpoint=dict(type='CheckpointHook', interval=5, by_epoch=True),
+    sampler_seed=dict(type='DistSamplerSeedHook'),
+    visualization=dict(type='Det3DVisualizationHook'))
