@@ -333,7 +333,7 @@ class CenterFormerBboxHead(nn.Module):
 
             batch, _, H, W = preds_dict['hm'].size()
 
-            ys, xs = torch.meshgrid([torch.arange(0, H), torch.arange(0, W)])
+            ys, xs = torch.meshgrid([torch.arange(0, H), torch.arange(0, W)], indexing='ij')
             ys = ys.view(1, H, W).repeat(batch, 1, 1).to(batch_score)
             xs = xs.view(1, H, W).repeat(batch, 1, 1).to(batch_score)
 
@@ -458,7 +458,7 @@ class CenterFormerBboxHead(nn.Module):
             elif test_cfg.nms.get('use_multi_class_nms', False):
                 # multi class nms
                 selected = []
-                for c in range(3):
+                for c in range(self.num_classes[task_id]):
                     class_mask = labels == c
                     if class_mask.sum() > 0:
                         class_idx = class_mask.nonzero()
@@ -509,7 +509,7 @@ def _circle_nms(boxes, min_radius, post_max_size=83):
 def get_box(pred_boxs, order, test_cfg, H, W):
     batch = pred_boxs.shape[0]
     obj_num = order.shape[1]
-    ys, xs = torch.meshgrid([torch.arange(0, H), torch.arange(0, W)])
+    ys, xs = torch.meshgrid([torch.arange(0, H), torch.arange(0, W)], indexing='ij')
     ys = ys.view(1, H, W).repeat(batch, 1, 1).to(pred_boxs)
     xs = xs.view(1, H, W).repeat(batch, 1, 1).to(pred_boxs)
 
@@ -536,7 +536,7 @@ def get_box(pred_boxs, order, test_cfg, H, W):
 def get_box_gt(gt_boxs, order, test_cfg, H, W):
     batch = gt_boxs.shape[0]
     obj_num = order.shape[1]
-    ys, xs = torch.meshgrid([torch.arange(0, H), torch.arange(0, W)])
+    ys, xs = torch.meshgrid([torch.arange(0, H), torch.arange(0, W)], indexing='ij')
     ys = ys.view(1, H, W).repeat(batch, 1, 1).to(gt_boxs)
     xs = xs.view(1, H, W).repeat(batch, 1, 1).to(gt_boxs)
 
@@ -571,9 +571,10 @@ def get_corresponding_box(x_ind, y_ind, y_mask, y_cls, target_box):
 
     for i in range(x_ind.shape[0]):
         idx = torch.arange(y_ind[i].shape[-1]).to(x_ind)
-        idx = idx[y_mask[i]]
-        box_cls = y_cls[i][y_mask[i]]
-        valid_y_ind = y_ind[i][y_mask[i]]
+        boll_value = y_mask[i].bool()
+        idx = idx[boll_value]
+        box_cls = y_cls[i][boll_value]
+        valid_y_ind = y_ind[i][boll_value]
         match = (x_ind[i].unsqueeze(1) == valid_y_ind.unsqueeze(0)).nonzero()
         select_target[i, match[:, 0]] = target_box[i, idx[match[:, 1]]]
         select_mask[i, match[:, 0]] = 1

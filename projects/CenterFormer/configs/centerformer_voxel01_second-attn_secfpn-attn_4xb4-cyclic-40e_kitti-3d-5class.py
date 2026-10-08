@@ -12,10 +12,11 @@ custom_imports = dict(
 # The current value will need to be reduced because I don't have enough GPU memory for training
 # TODO: Try train the model and adjust this value acordingly also consider the grid_size and sparse_shape
 # I tried to train the model and I don't have sufficient VRAM so need to increase voxel size 
-voxel_size = [0.05, 0.05, 0.1]
+#voxel_size = [0.05, 0.05, 0.1]
+voxel_size = [0.2, 0.2, 0.1]
 point_cloud_range = [0, -40, -3, 70.4, 40, 1]
 data_root = 'data/kitti/'
-class_names = ['Car', 'Van', 'Truck','Pedestrian', 'Cyclist']
+class_names = ['Car', 'Van', 'Truck', 'Pedestrian', 'Cyclist']
 tasks = [dict(num_class=5, class_names=['car', 'van', 'truck', 'pedestrian', 'cyclist'])]
 metainfo = dict(classes=class_names)
 input_modality = dict(use_lidar=True, use_camera=False)
@@ -40,7 +41,8 @@ model = dict(
         type='SparseEncoder',
         in_channels=4,
         # TODO: Check this value
-        sparse_shape=[41, 1600, 1408],
+        #sparse_shape=[41, 1600, 1408],
+        sparse_shape=[41, 400, 352],
         order=('conv', 'norm', 'act'),
         norm_cfg=dict(type='naiveSyncBN1d', eps=0.001, momentum=0.01),
         encoder_channels=((16, 16, 32), (32, 32, 64), (64, 64, 128), (128,
@@ -53,6 +55,7 @@ model = dict(
         ds_num_filters=[256, 256, 128],
         num_input_features=256,
         tasks=tasks,
+        classes=len(class_names),
         use_gt_training=True,
         corner=True,
         assign_label_window_size=1,
@@ -72,7 +75,7 @@ model = dict(
         type='CenterFormerBboxHead',
         in_channels=256,
         tasks=tasks,
-        dataset='waymo',
+        dataset='kitti',
         weight=2,
         corner_loss=True,
         iou_loss=True,
@@ -86,10 +89,12 @@ model = dict(
             'rot': (2, 2),
             'iou': (1, 2)
         },  # (output_channel, num_conv)
+        iou_factor=[1, 1, 1, 1, 4]
     ),
     train_cfg=dict(
         # TODO: Check this value
-        grid_size=[1408, 1600, 40],
+        #grid_size=[1408, 1600, 40],
+        grid_size=[352, 400, 40],
         voxel_size=voxel_size,
         out_size_factor=4,
         dense_reg=1,
@@ -99,18 +104,18 @@ model = dict(
         min_radius=2,
         code_weights=[1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]),
     test_cfg=dict(
-        post_center_limit_range=[-80, -80, -10.0, 80, 80, 10.0],
+        post_center_limit_range=[0, -40, -3, 70.4, 40, 1],
         nms=dict(
             use_rotate_nms=False,
             use_multi_class_nms=True,
-            nms_pre_max_size=[1600, 1600, 800],
-            nms_post_max_size=[200, 200, 100],
-            nms_iou_threshold=[0.8, 0.55, 0.55],
+            nms_pre_max_size=[1600, 1600, 1600, 1600, 800],
+            nms_post_max_size=[200, 200, 200, 200, 100],
+            nms_iou_threshold=[0.8, 0.55, 0.55, 0.55, 0.55],
         ),
         score_threshold=0.1,
-        pc_range=[-75.2, -75.2],
+        pc_range=[0, -40],
         out_size_factor=4,
-        voxel_size=[0.1, 0.1],
+        voxel_size=[0.2, 0.2],
         obj_num=1000,
     ))
 
@@ -194,7 +199,7 @@ test_pipeline = [
 
 dataset_type = 'KittiDataset'
 train_dataloader = dict(
-    batch_size=4,
+    batch_size=8,
     num_workers=4,
     persistent_workers=True,
     sampler=dict(type='DefaultSampler', shuffle=True),
@@ -246,8 +251,8 @@ vis_backends = [
         type='WandbVisBackend',
         init_kwargs=dict(
             project='Dissertação Mestrado',                  # Change to your W&B project
-            name='CenterFormer_Training_Kitti_40epochs',     # Optional: experiment name
-            id='CenterFormer_KITTI_5class',                  # set to previous run's id to resume the same run
+            name='CenterFormer_Training_Kitti_40epochs_test6',     # Optional: experiment name
+            #id='CenterFormer_KITTI_5class__test2',                  # set to previous run's id to resume the same run
             resume='allow',                                  # 'allow'|'must'|'never' (use 'allow' to resume if exists)
             save_code=True                                   # Optional: save code to W&B                             
             ))
@@ -263,8 +268,8 @@ visualizer = dict(
 # interval to be 20. Please change the interval accordingly if you do not
 # use a default schedule.
 # optimizer
-#lr = 3e-4
-lr = 0.0054
+lr = 3e-4
+#lr = 0.0054
 # The optimizer follows the setting in SECOND.Pytorch, but here we use
 # the official AdamW optimizer implemented by PyTorch.
 optim_wrapper = dict(
